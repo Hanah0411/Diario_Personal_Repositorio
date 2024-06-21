@@ -1,38 +1,45 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     const noteInput = document.getElementById('note-input');
     const addNoteBtn = document.getElementById('add-note-btn');
     const notesContainer = document.getElementById('notes-container');
 
-    // Cargar notas desde Local Storage al inicio
+    // Importa el canister idl y actor
+    const { my_project_backend } = await import('ic:canisters/my_project_backend');
+
+    // Cargar notas desde el servidor al inicio
     loadNotes();
 
-    addNoteBtn.addEventListener('click', () => {
+    addNoteBtn.addEventListener('click', async () => {
         const noteText = noteInput.value.trim();
         if (noteText) {
-            addNoteAndSaveToLocalStorage(noteText);
+            await addNoteAndSaveToServer(noteText);
             noteInput.value = '';
         }
     });
 
-    function addNoteAndSaveToLocalStorage(noteText) {
+    function addNoteToDOM(noteText) {
         const noteElement = document.createElement('div');
         noteElement.className = 'note';
         noteElement.textContent = noteText;
         notesContainer.appendChild(noteElement);
-
-        // Guardar la nota en el almacenamiento local
-        saveNoteToLocalStorage(noteText);
     }
 
-    function saveNoteToLocalStorage(noteText) {
-        let notes = JSON.parse(localStorage.getItem('notes')) || [];
-        notes.push(noteText);
-        localStorage.setItem('notes', JSON.stringify(notes));
+    async function addNoteAndSaveToServer(noteText) {
+        addNoteToDOM(noteText);
+
+        try {
+            await my_project_backend.addNote(noteText);
+        } catch (error) {
+            console.error('Error al agregar la nota al servidor:', error);
+        }
     }
 
-    function loadNotes() {
-        let notes = JSON.parse(localStorage.getItem('notes')) || [];
-        notes.forEach(noteText => addNoteAndSaveToLocalStorage(noteText));
+    async function loadNotes() {
+        try {
+            const notes = await my_project_backend.getNotes();
+            notes.forEach(noteText => addNoteToDOM(noteText));
+        } catch (error) {
+            console.error('Error al cargar las notas desde el servidor:', error);
+        }
     }
 });
-
